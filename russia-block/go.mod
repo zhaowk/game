@@ -1,4 +1,4 @@
-module github.com/zhaowk/game/russia_block
+module github.com/zhaowk/game/russia-block
 
 go 1.18
 

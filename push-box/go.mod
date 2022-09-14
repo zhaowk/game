@@ -1,4 +1,4 @@
-module github.com/zhaowk/game/push_box
+module github.com/zhaowk/game/push-box
 
 go 1.18
 
