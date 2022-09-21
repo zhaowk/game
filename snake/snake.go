@@ -97,47 +97,46 @@ func (s *snake) run() {
 }
 
 func (s *snake) draw() {
-	// clear screen
-	fmt.Print("\x1B[1J")
-	// move to left-top
-	fmt.Print("\x1B[H")
+	// clear && move to (0, 0)
+	game.Clear()
+	game.Cursor(game.Point{})
 
 	// panel
-	fmt.Printf("\x1b[1H%s", strings.Repeat(snakeWall, s.width+2))
+	game.Draw(strings.Repeat(snakeWall, s.width+2))
 	for i := 0; i < s.height; i++ {
-		fmt.Printf("\x1b[%dH%s", i+2, snakeWall)
+		game.DrawAt(game.Point{X: i + 1}, snakeWall)
 		for j := 0; j < s.width; j++ {
-			fmt.Print(snakeBlank)
+			game.Draw(snakeBlank)
 		}
-		fmt.Println(snakeWall)
+		game.DrawLine(snakeWall)
 	}
-	fmt.Print(strings.Repeat(snakeWall, s.width+2))
+	game.Draw(strings.Repeat(snakeWall, s.width+2))
 
+	// snake
 	for e := s.snake.Front(); e != nil; e = e.Next() {
 		if p, ok := e.Value.(game.Point); ok {
-			fmt.Printf("\x1b[%d;%dH%s", p.X+2, p.Y+2, snakeBody)
+			game.DrawAt(game.Point{X: p.X + 1, Y: p.Y + 1}, snakeBody)
 		}
 	}
 
 	// snake head
 	if head, ok := s.snake.Front().Value.(game.Point); ok {
-		fmt.Printf("\x1b[%d;%dH%s", head.X+2, head.Y+2, snakeHead)
+		game.DrawAt(game.Point{X: head.X + 1, Y: head.Y + 1}, snakeHead)
 	}
 
 	// snake food
-	fmt.Printf("\x1b[%d;%dH%s", s.food.X+2, s.food.Y+2, snakeFood)
+	game.DrawAt(game.Point{X: s.food.X + 1, Y: s.food.Y + 1}, snakeFood)
 
 	// messages at right
-	fmt.Printf("\x1b[2;%dH Score: %d", s.width+4, s.snake.Len())
-
-	fmt.Printf("\x1b[3;%dH Tips:", s.width+4)
-	fmt.Printf("\x1b[4;%dH    q -> exit", s.width+4)
-	fmt.Printf("\x1b[5;%dH    a -> left", s.width+4)
-	fmt.Printf("\x1b[6;%dH    d -> right", s.width+4)
-	fmt.Printf("\x1b[7;%dH    w -> up", s.width+4)
-	fmt.Printf("\x1b[8;%dH    s -> down", s.width+4)
-	fmt.Printf("\x1b[9;%dH %s", s.width+4, sub(s.msg))
-	fmt.Printf("\x1b[%d;%dH ", s.height+2, s.width+4)
+	game.DrawAt(game.Point{X: 1, Y: s.width + 4}, fmt.Sprintf("Score: %d", s.snake.Len()))
+	game.DrawAt(game.Point{X: 2, Y: s.width + 4}, "Tips:")
+	game.DrawAt(game.Point{X: 3, Y: s.width + 7}, "q -> exit")
+	game.DrawAt(game.Point{X: 4, Y: s.width + 7}, "a -> left")
+	game.DrawAt(game.Point{X: 5, Y: s.width + 7}, "d -> right")
+	game.DrawAt(game.Point{X: 6, Y: s.width + 7}, "w -> up")
+	game.DrawAt(game.Point{X: 7, Y: s.width + 7}, "s -> down")
+	game.DrawAt(game.Point{X: 8, Y: s.width + 4}, sub(s.msg))
+	game.Cursor(game.Point{X: s.height + 1, Y: s.width + 3})
 }
 
 func (s *snake) doMove() {
@@ -172,10 +171,10 @@ func (s *snake) doMove() {
 		if s.food == q {
 			// check
 			s.doCheck()
-			// eat, gen new
+			// eat food, gen new
 			s.genFood()
 		} else {
-			// not eat, remove tail
+			// eat nothing, remove tail
 			s.snake.Remove(s.snake.Back())
 		}
 	}

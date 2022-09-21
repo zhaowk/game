@@ -34,6 +34,7 @@ type russiaBlock struct {
 	runtime [][]byte
 	msg     string
 	score   int
+	stop    bool
 
 	opCh chan int
 	curr block
@@ -72,12 +73,12 @@ func (b *russiaBlock) Run(k int, _ string) {
 	case 'd', 'D', game.SysRight:
 		b.opCh <- game.SysRight
 	case 'q', 'Q':
-		os.Exit(0)
+		b.stop = true
 	}
 }
 
 func (b *russiaBlock) Next() bool {
-	return true
+	return !b.stop
 }
 
 func (b *russiaBlock) Finish() {
@@ -87,7 +88,7 @@ func (b *russiaBlock) run() {
 	tick := time.Tick(10 * time.Millisecond)
 	prev := time.Now()
 	b.draw()
-	for {
+	for !b.stop {
 		select {
 		case op := <-b.opCh:
 			switch op {
@@ -122,48 +123,44 @@ func (b *russiaBlock) genNext() {
 }
 
 func (b *russiaBlock) draw() {
-	// clear screen
-	fmt.Print("\x1B[1J")
-	// move to left-top
-	fmt.Print("\x1B[H")
+	game.Clear()
+	game.Cursor(game.Point{})
 
 	// panel
-	fmt.Printf("\x1b[1H%s", strings.Repeat(russiaBlockWall, b.width+2))
+	game.Draw(strings.Repeat(russiaBlockWall, b.width+2))
 
 	for i, s := range b.runtime {
-		fmt.Printf("\x1b[%dH%s", i+2, russiaBlockWall)
+		game.DrawAt(game.Point{X: i + 1}, russiaBlockWall)
 		for _, c := range s {
 			if c == 0 || c == ' ' {
-				fmt.Print(russiaBlockEmpty)
+				game.Draw(russiaBlockEmpty)
 			} else {
-				fmt.Print(russiaBlockBlk)
+				game.Draw(russiaBlockBlk)
 			}
 		}
-		fmt.Println(russiaBlockWall)
+		game.DrawLine(russiaBlockWall)
 	}
-	fmt.Print(strings.Repeat(russiaBlockWall, b.width+2))
+	game.Draw(strings.Repeat(russiaBlockWall, b.width+2))
 
 	for _, p := range b.curr.Points() {
-		fmt.Printf("\x1b[%d;%dH%s", b.pos.X+2+p.X, b.pos.Y+2+p.Y, russiaBlockBlk)
+		game.DrawAt(game.Point{X: b.pos.X + p.X + 1, Y: b.pos.Y + p.Y + 1}, russiaBlockBlk)
 	}
 
 	// messages at right
-	fmt.Printf("\x1b[2;%dH Score: %d", b.width+4, b.score)
-	fmt.Printf("\x1b[3;%dH Next: ", b.width+4)
-
-	fmt.Printf("\x1b[4;%dH   %s", b.width+4, b.next.GetLine(0))
-	fmt.Printf("\x1b[5;%dH   %s", b.width+4, b.next.GetLine(1))
-	fmt.Printf("\x1b[6;%dH   %s", b.width+4, b.next.GetLine(2))
-	fmt.Printf("\x1b[7;%dH   %s", b.width+4, b.next.GetLine(3))
-
-	fmt.Printf("\x1b[8;%dH Tips:", b.width+4)
-	fmt.Printf("\x1b[9;%dH    q -> exit", b.width+4)
-	fmt.Printf("\x1b[10;%dH    a -> left", b.width+4)
-	fmt.Printf("\x1b[11;%dH    d -> right", b.width+4)
-	fmt.Printf("\x1b[12;%dH    w -> switch", b.width+4)
-	fmt.Printf("\x1b[13;%dH    s -> down", b.width+4)
-	fmt.Printf("\x1b[14;%dH %s", b.width+4, sub(b.msg))
-	fmt.Printf("\x1b[%d;%dH ", b.height+2, b.width+4)
+	game.DrawAt(game.Point{X: 1, Y: b.width + 4}, fmt.Sprintf("Score: %d", b.score))
+	game.DrawAt(game.Point{X: 2, Y: b.width + 4}, "Next:")
+	game.DrawAt(game.Point{X: 3, Y: b.width + 6}, b.next.GetLine(0))
+	game.DrawAt(game.Point{X: 4, Y: b.width + 6}, b.next.GetLine(1))
+	game.DrawAt(game.Point{X: 5, Y: b.width + 6}, b.next.GetLine(2))
+	game.DrawAt(game.Point{X: 6, Y: b.width + 6}, b.next.GetLine(3))
+	game.DrawAt(game.Point{X: 7, Y: b.width + 4}, "Tips:")
+	game.DrawAt(game.Point{X: 8, Y: b.width + 7}, "q -> exit")
+	game.DrawAt(game.Point{X: 9, Y: b.width + 7}, "a -> left")
+	game.DrawAt(game.Point{X: 10, Y: b.width + 7}, "d -> right")
+	game.DrawAt(game.Point{X: 11, Y: b.width + 7}, "w -> switch")
+	game.DrawAt(game.Point{X: 12, Y: b.width + 7}, "s -> down")
+	game.DrawAt(game.Point{X: 13, Y: b.width + 4}, sub(b.msg))
+	game.Cursor(game.Point{X: b.height + 1, Y: b.width + 3})
 }
 
 func (b *russiaBlock) doSwitch() {

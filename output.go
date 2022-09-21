@@ -7,39 +7,48 @@ import (
 	"strconv"
 )
 
+// Clear screen
 func Clear() {
 	fmt.Print(ClearPrev)
 	fmt.Print(ClearAll)
 }
 
+// DrawAt draw string `s` at Point `p`. Point(x, y) starts with (0, 0) from left-top (x => row, y => col)
 func DrawAt(p Point, s string) {
 	fmt.Print(cursorPos(p.X+1, p.Y+1) + s)
 }
 
+// Draw string `s` at current Position
 func Draw(s string) {
 	fmt.Print(s)
 }
 
+// DrawLine Draw string `s` at current Position with new line
 func DrawLine(s string) {
 	fmt.Println(s)
 }
 
+// DrawLineAt Draw string `s` at Point `p` with new line
 func DrawLineAt(p Point, s string) {
 	fmt.Println(cursorPos(p.X+1, p.Y+1) + s)
 }
 
+// DrawSgr Draw content `s` with Sgr definitions
 func DrawSgr(content string, sgr ...string) {
 	fmt.Printf("%s%s%s", SgrSet(sgr...), content, SgrReset())
 }
 
+// DrawColor8 draw `s` with color(ColorType, Color8)
 func DrawColor8(t ColorType, c Color8, s string) {
 	DrawSgr(s, SgrColor(t, c))
 }
 
+// DrawColor256 draw `s` with color256(ColorType, uint8)
 func DrawColor256(t ColorType, c uint8, s string) {
 	DrawSgr(s, SgrColor8bit(t, c))
 }
 
+// DrawColorRGB draw `s` with colorRgb(ColorType, RGB)
 func DrawColorRGB(t ColorType, c RGB, s string) {
 	DrawSgr(s, SgrColorRGB(t, c))
 }
@@ -60,42 +69,52 @@ const (
 	RCP           = _CSI + "u" // 恢复光标位置
 )
 
+// Cursor move cursor to Point(p) starts with (0,0) from left-top
 func Cursor(p Point) {
 	fmt.Print(cursorPos(p.X+1, p.Y+1))
 }
 
+// CursorUp move cursor up
 func CursorUp(n int) {
 	fmt.Printf("%s%dA", _CSI, n)
 }
 
+// CursorDown move cursor down
 func CursorDown(n int) {
 	fmt.Printf("%s%dB", _CSI, n)
 }
 
+// CursorForward move cursor forward
 func CursorForward(n int) {
 	fmt.Printf("%s%dC", _CSI, n)
 }
 
+// CursorBack move cursor back
 func CursorBack(n int) {
 	fmt.Printf("%s%dD", _CSI, n)
 }
 
+// CursorNextLine move cursor next line
 func CursorNextLine(n int) {
 	fmt.Printf("%s%dE", _CSI, n)
 }
 
+// CursorPrevLine move cursor prev line
 func CursorPrevLine(n int) {
 	fmt.Printf("%s%dF", _CSI, n)
 }
 
+// CursorPos move cursor to (x, y) starts with (1, 1)
 func CursorPos(x, y int) {
 	fmt.Print(cursorPos(x, y))
 }
 
+// CursorSave save current cursor position
 func CursorSave() {
 	fmt.Print(SCP)
 }
 
+// CursorRestore restore saved position
 func CursorRestore() {
 	fmt.Print(RCP)
 }
@@ -112,10 +131,12 @@ func scrollDown(n int) string {
 	return fmt.Sprintf("%s%dT", _CSI, n)
 }
 
+// Sgr get sgr string
 func Sgr(m string) string {
 	return _CSI + m + "m"
 }
 
+// SgrSet set multi sgr attributes and return the string
 func SgrSet(s ...string) string {
 	if len(s) == 0 {
 		return ""
@@ -128,12 +149,15 @@ func SgrSet(s ...string) string {
 	return Sgr(sgr)
 }
 
+// SgrReset reset sgr
 func SgrReset() string {
 	return SgrNormal
 }
 
+// ColorType color type of Foreground, Background, BrightForeground, BrightBackground
 type ColorType uint8
 
+// String color type string
 func (c ColorType) String() string {
 	switch c {
 	case Foreground:
@@ -148,8 +172,10 @@ func (c ColorType) String() string {
 	return ""
 }
 
+// Color8 color of ColorBlack, ColorRed, ..., ColorWhite
 type Color8 uint8
 
+// String Color8 symbol
 func (c Color8) String() string {
 	if c < ColorMax {
 		return strconv.Itoa(int(c))
@@ -157,8 +183,10 @@ func (c Color8) String() string {
 	return ""
 }
 
+// RGB color of RGB(R, G, B)
 type RGB [3]uint8
 
+// String RGB symbol
 func (r RGB) String() string {
 	return fmt.Sprintf("%d;%d;%d", r[0], r[1], r[2])
 }
@@ -182,6 +210,7 @@ const (
 	ColorMax
 )
 
+// SgrColor sgr color 8 string
 func SgrColor(t ColorType, color Color8) string {
 	if t > BrightBackground || color >= ColorMax {
 		return ""
@@ -189,6 +218,7 @@ func SgrColor(t ColorType, color Color8) string {
 	return fmt.Sprintf("%s%d", t.String(), color)
 }
 
+// SgrColor8bit sgr color 8bit string
 func SgrColor8bit(t ColorType, color uint8) string {
 	if t > BrightBackground {
 		return ""
@@ -196,6 +226,7 @@ func SgrColor8bit(t ColorType, color uint8) string {
 	return fmt.Sprintf("%s%s%d", t.String(), SgrColor256, color)
 }
 
+// SgrColorRGB sgr color rgb string
 func SgrColorRGB(t ColorType, color RGB) string {
 	if t > BrightBackground {
 		return ""

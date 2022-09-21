@@ -1,13 +1,14 @@
 package main
 
 import (
+	"github.com/zhaowk/game"
 	"os"
 )
 
 func main() {
-	path := ""
-	if len(os.Args) > 1 {
-		path = os.Args[1]
+	if len(os.Args) == 2 {
+		game.RunGame(&pushBoxMul{}, os.Args[1])
+	} else {
+		game.RunGame(&pushBoxMul{})
 	}
-	runGame(path)
 }

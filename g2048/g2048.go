@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/zhaowk/game"
 	"math/rand"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -39,6 +38,8 @@ func (b block) String() string {
 type g2048 struct {
 	size int
 	pane [][]block
+	msg  string
+	stop bool
 }
 
 func (g *g2048) Init(...interface{}) error {
@@ -73,20 +74,28 @@ func (g *g2048) Run(k int, _ string) {
 	case 'd', 'D', game.SysRight:
 		g.moveRight()
 	case 'q', 'Q':
-		game.DrawLine("Exiting...")
-		os.Exit(0)
+		g.msg = "Quiting..."
+		g.stop = true
 	}
 }
 
 func (g *g2048) Next() bool {
+	// check stop
+	if g.stop {
+		return false
+	}
+
+	// check win
 	for i := 0; i < g.size; i++ {
 		for j := 0; j < g.size; j++ {
 			if g.pane[i][j] >= gGameMax {
-				game.DrawLine("Congratulations!")
+				g.msg = "Congratulations!"
 				return false
 			}
 		}
 	}
+
+	// check valid
 	for i := 0; i < g.size; i++ {
 		for j := 0; j < g.size; j++ {
 			if g.pane[i][j] == 0 {
@@ -102,10 +111,14 @@ func (g *g2048) Next() bool {
 			}
 		}
 	}
+	// game over
+	g.msg = "Game over!"
 	return false
 }
 
-func (g *g2048) Finish() {}
+func (g *g2048) Finish() {
+	game.DrawLine(g.msg)
+}
 
 func (g *g2048) draw() {
 	game.Clear()
@@ -168,37 +181,34 @@ func (g *g2048) moveDown() {
 func (g *g2048) genRow(i int) []block {
 	tmp := make([]block, len(g.pane[i]))
 	copy(tmp, g.pane[i])
-	return g.pane[i]
+	return tmp
 }
 
 func (g *g2048) genCol(i int) []block {
-	var tmp []block
+	tmp := make([]block, g.size)
 	for j := 0; j < g.size; j++ {
-		tmp = append(tmp, g.pane[j][i])
+		tmp[j] = g.pane[j][i]
 	}
 	return tmp
 }
 
 func (g *g2048) setRow(x int, line []block) {
-	for i := 0; i < len(line); i++ {
-		if x >= 0 && x < g.size {
-			g.pane[x][i] = line[i]
-		}
-	}
+	copy(g.pane[x], line)
 }
 
 func (g *g2048) setCol(y int, line []block) {
 	for i := 0; i < len(line); i++ {
-		if y >= 0 && y < g.size {
-			g.pane[i][y] = line[i]
-		}
+		g.pane[i][y] = line[i]
 	}
 }
 
 func (g *g2048) doMerge(reverse bool, item []block) []block {
-	sort.Slice(item, func(i, j int) bool {
-		return (reverse && i > j) || i < j
-	})
+	if reverse {
+		sort.Slice(item, func(i, j int) bool {
+			return i > j
+		})
+	}
+
 	target := make([]block, 0)
 
 	for _, b := range item {
@@ -225,12 +235,12 @@ func (g *g2048) doMerge(reverse bool, item []block) []block {
 		}
 	}
 
-	sort.Slice(target, func(i, j int) bool {
-		return (reverse && i > j) || i < j
-	})
-
+	// fill zero
 	tmp := make([]block, len(item)-len(target))
 	if reverse {
+		sort.Slice(target, func(i, j int) bool {
+			return i > j
+		})
 		return append(tmp, target...)
 	} else {
 		return append(target, tmp...)
@@ -248,8 +258,9 @@ func (g *g2048) genNext() {
 	}
 
 	if len(empty) == 0 {
-		game.DrawLine("Game over!")
-		os.Exit(0)
+		g.stop = true
+		g.msg = "Game over!"
+		return
 	}
 
 	pos := empty[rand.Intn(len(empty))]

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/zhaowk/game"
@@ -62,6 +61,10 @@ func (g gameItem) fromByte(b byte) gameItem {
 	}
 }
 
+func (g gameItem) String() string {
+	return fmt.Sprintf("%c", g.toByte())
+}
+
 type gamePane [][]gameItem
 
 // String gamePane stringer
@@ -83,6 +86,7 @@ type pushBox struct {
 	width      int
 	height     int
 	msg        string
+	stop       bool
 }
 
 func (g *pushBox) Init(args ...interface{}) error {
@@ -111,12 +115,16 @@ func (g *pushBox) Run(k int, _ string) {
 	case 'r', 'R':
 		_ = g.init(g.original)
 	case 'q', 'Q':
-		os.Exit(0)
+		g.stop = true
 	}
+	g.draw()
 }
 
 func (g *pushBox) Next() bool {
-	g.draw()
+	if g.stop {
+		return false
+	}
+
 	for i := range g.runtime {
 		for j := range g.runtime[i] {
 			switch g.runtime[i][j] {
@@ -184,6 +192,7 @@ func (g *pushBox) init(pane boxMap) error {
 	}
 
 	g.runPerson = g.origPerson
+	g.draw()
 	return nil
 }
 
@@ -228,38 +237,76 @@ func (g *pushBox) draw() {
 		return
 	}
 
-	// clear screen
-	fmt.Print("\x1B[1J")
-	// move to left-top
-	fmt.Print("\x1B[H")
+	// clear screen & move curse to (0, 0)
+	game.Clear()
+	game.Cursor(game.Point{})
 
 	// panel
 	for _, s := range g.runtime {
 		for _, c := range s {
-			fmt.Printf("%c", c.toByte())
+			game.Draw(c.String())
 		}
-		fmt.Println()
+		game.DrawLine("")
 	}
 
 	// messages at right
-	fmt.Printf("\x1b[1;%dH Tips: push all `o` to `.`", g.width+4)
-	fmt.Printf("\x1b[2;%dH press w,s,a,d to move `p`", g.width+4)
-	fmt.Printf("\x1b[3;%dH press r to reset, q to exit", g.width+4)
-	fmt.Printf("\x1b[4;%dH %s", g.width+4, g.msg)
-	fmt.Printf("\x1b[%d;1H ", g.height+1)
-	fmt.Printf("height:%d, width:%d", g.height, g.width)
+	game.DrawAt(game.Point{Y: g.width + 4}, "Tips: push all `o` to `.`")
+	game.DrawAt(game.Point{X: 1, Y: g.width + 4}, "press w,s,a,d to move `p`")
+	game.DrawAt(game.Point{X: 2, Y: g.width + 4}, "press r to reset, q to exit")
+	game.DrawAt(game.Point{X: 3, Y: g.width + 4}, g.msg)
+	game.DrawAt(game.Point{X: g.height}, fmt.Sprintf("height:%d, width:%d", g.height, g.width))
 }
 
-func runGame(path string) {
-	maps, err := loadMap(path)
-	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err.Error())
-	}
-	if len(maps) == 0 {
-		maps = defaultMaps
+type pushBoxMul struct {
+	maps []boxMap
+	idx  int
+	curr *pushBox
+	stop bool
+}
+
+func (g *pushBoxMul) Init(args ...interface{}) (err error) {
+	if len(args) == 0 {
+		g.maps = defaultMaps
+	} else if len(args) > 1 {
+		return fmt.Errorf("too many args")
+	} else if path, ok := args[0].(string); ok {
+		g.maps, err = loadMap(path)
 	}
 
-	for _, m := range maps {
-		game.RunGame(&pushBox{}, m)
+	if err != nil || len(g.maps) == 0 {
+		return fmt.Errorf("error: %v", err.Error())
+	}
+
+	g.curr = &pushBox{}
+	return g.curr.Init(g.maps[0])
+}
+
+func (g *pushBoxMul) Run(k int, s string) {
+	switch k {
+	case 'q', 'Q':
+		g.stop = true
+	default:
+		g.curr.Run(k, s)
 	}
 }
+
+func (g *pushBoxMul) Next() bool {
+	if g.stop {
+		return false
+	}
+
+	if g.curr.Next() {
+		return true
+	} else {
+		g.curr.Finish()
+		g.idx++
+	}
+
+	if g.idx >= len(g.maps) {
+		return false
+	}
+
+	return nil == g.curr.init(g.maps[g.idx])
+}
+
+func (g *pushBoxMul) Finish() {}
