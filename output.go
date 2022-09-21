@@ -8,6 +8,7 @@ import (
 )
 
 func Clear() {
+	fmt.Print(ClearPrev)
 	fmt.Print(ClearAll)
 }
 
